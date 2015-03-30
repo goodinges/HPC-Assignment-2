@@ -43,7 +43,7 @@ int main( int argc, char *argv[])
 
   /* Number of random numbers per processor (this should be increased
    * for actual tests or could be passed in through the command line */
-  N = 100;
+  N = 10;
 
   vec = calloc(N, sizeof(int));
   sampleSize = N/mpisize;
@@ -65,16 +65,20 @@ int main( int argc, char *argv[])
   for(i = 0; i < sampleSize; i++)
   {
 	  sampleVec[i] = vec[i*mpisize];
+		printf("%d->sampleVec[%d]:%d\n", rank, i, sampleVec[i]);
   }
-
   /* every processor communicates the selected entries
    * to the root processor; use for instance an MPI_Gather */
   if(rank==0)
   {
 	  allSamplesVec = calloc(sampleSize*mpisize, sizeof(int));
   }
-  MPI_Gather(sampleVec, sampleSize, MPI_INT, allSamplesVec, sampleSize*mpisize, MPI_INT, 0, MPI_COMM_WORLD);
-
+  MPI_Gather(sampleVec, sampleSize, MPI_INT, allSamplesVec, sampleSize, MPI_INT, 0, MPI_COMM_WORLD);
+if(rank==0)
+	for(i=0;i<sampleSize*mpisize;i++)
+	{
+		printf("%d->allSamplesVec[%d]:%d\n", rank, i, allSamplesVec[i]);
+	}
   /* root processor does a sort, determinates splitters that
    * split the data into P buckets of approximately the same size */
   if(rank==0)
@@ -84,6 +88,7 @@ int main( int argc, char *argv[])
 	  for(i = 0; i < mpisize - 1 ; i++)
 	  {
 		  splitters[i] = allSamplesVec[i*sampleSize];
+		printf("%d->splitters[%d]:%d\n", rank, i, splitters[i]);
 	  }
   }
 
@@ -108,6 +113,10 @@ int main( int argc, char *argv[])
   //j++;
   sdispls[j] = i;
   scounts[j] = N - i;
+	for(i=0;i<mpisize;i++)
+	{
+		printf("%d->scount[%d]:%d\n", rank, i, scounts[i]);
+	}
   //printf("sdispls=%d\n", sdispls[0]);
   //printf("scounts=%d\n", scounts[0]);
 
@@ -124,7 +133,7 @@ int main( int argc, char *argv[])
 	  recvCount += recvCounts[i];
 	  rcounts[i] = recvCounts[i];
   }
-  printf("recvCount=%d\n", recvCount);
+  printf("\nrecvCount=%d\n", recvCount);
   recvVec = calloc(recvCount, sizeof(int));
   rdispls = calloc(mpisize, sizeof(int));
   MPI_Alltoallv(vec, scounts, sdispls, MPI_INT, recvVec, rcounts, rdispls, MPI_INT, MPI_COMM_WORLD);
@@ -136,6 +145,7 @@ int main( int argc, char *argv[])
 	//printf("\n");
   /* do a local sort */
   qsort(recvVec, recvCount, sizeof(int), compare);
+printf("\n%d***\n",rank);
 
   /* every processor writes its result to a file */
   printf("Rank %d: ", rank);
@@ -144,6 +154,7 @@ int main( int argc, char *argv[])
 	  printf("%d ", recvVec[i]);
   }
   printf("\n");
+printf("\n%d***\n",rank);
 
   free(vec);
   free(sampleVec);
