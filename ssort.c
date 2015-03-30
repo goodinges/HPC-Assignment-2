@@ -43,7 +43,7 @@ int main( int argc, char *argv[])
 
   /* Number of random numbers per processor (this should be increased
    * for actual tests or could be passed in through the command line */
-  N = 10;
+  N = 100;
 
   vec = calloc(N, sizeof(int));
   sampleSize = N/mpisize;
@@ -59,14 +59,14 @@ int main( int argc, char *argv[])
 
   /* sort locally */
   qsort(vec, N, sizeof(int), compare);
-
+  
   /* randomly sample s entries from vector or select local splitters,
    * i.e., every N/P-th entry of the sorted vector */
   for(i = 0; i < sampleSize; i++)
   {
 	  sampleVec[i] = vec[i*mpisize];
-		printf("%d->sampleVec[%d]:%d\n", rank, i, sampleVec[i]);
   }
+
   /* every processor communicates the selected entries
    * to the root processor; use for instance an MPI_Gather */
   if(rank==0)
@@ -74,6 +74,7 @@ int main( int argc, char *argv[])
 	  allSamplesVec = calloc(sampleSize*mpisize, sizeof(int));
   }
   MPI_Gather(sampleVec, sampleSize, MPI_INT, allSamplesVec, sampleSize, MPI_INT, 0, MPI_COMM_WORLD);
+
   /* root processor does a sort, determinates splitters that
    * split the data into P buckets of approximately the same size */
   if(rank==0)
@@ -81,13 +82,11 @@ int main( int argc, char *argv[])
 	  qsort(allSamplesVec, sampleSize*mpisize, sizeof(int), compare);
 	for(i=0;i<sampleSize*mpisize;i++)
 	{
-		printf("%d->allSamplesVec[%d]:%d\n", rank, i, allSamplesVec[i]);
 	}
 	  splitters = calloc(mpisize - 1, sizeof(int));
-	  for(i = 1; i < mpisize ; i++)
+	  for(i = 0; i < mpisize - 1 ; i++)
 	  {
-		  splitters[i] = allSamplesVec[i*sampleSize];
-		printf("%d->splitters[%d]:%d\n", rank, i, splitters[i]);
+		  splitters[i] = allSamplesVec[(i+1)*sampleSize];
 	  }
   }
 
@@ -109,51 +108,38 @@ int main( int argc, char *argv[])
 		  i++;
 	  }
   }
-  //j++;
   sdispls[j] = i;
   scounts[j] = N - i;
 	for(i=0;i<mpisize;i++)
-	{
-		printf("%d->scount[%d]:%d\n", rank, i, scounts[i]);
-	}
-  //printf("sdispls=%d\n", sdispls[0]);
-  //printf("scounts=%d\n", scounts[0]);
 
   /* send and receive: either you use MPI_AlltoallV, or
    * (and that might be easier), use an MPI_Alltoall to share
    * with every processor how many integers it should expect,
    * and then use MPI_Send and MPI_Recv to exchange the data */
   recvCounts = calloc(mpisize, sizeof(int));
-  MPI_Alltoall(scounts, mpisize, MPI_INT, recvCounts, mpisize, MPI_INT, MPI_COMM_WORLD);
+  MPI_Alltoall(scounts, 1, MPI_INT, recvCounts, 1, MPI_INT, MPI_COMM_WORLD);
   recvCount = 0;
   rcounts = calloc(mpisize, sizeof(int));
+  rdispls = calloc(mpisize, sizeof(int));
   for(i = 0; i < mpisize ; i++)
   {
+	  rdispls[i] = recvCount;
 	  recvCount += recvCounts[i];
 	  rcounts[i] = recvCounts[i];
   }
-  printf("\nrecvCount=%d\n", recvCount);
   recvVec = calloc(recvCount, sizeof(int));
-  rdispls = calloc(mpisize, sizeof(int));
   MPI_Alltoallv(vec, scounts, sdispls, MPI_INT, recvVec, rcounts, rdispls, MPI_INT, MPI_COMM_WORLD);
-  printf("\n---\n");
-	//for(i=0;i<recvCount;i++)
-	//{
-	//	printf("%d\t", recvVec[i]);
-	//}
-	//printf("\n");
+
   /* do a local sort */
   qsort(recvVec, recvCount, sizeof(int), compare);
-printf("\n%d***\n",rank);
 
   /* every processor writes its result to a file */
   printf("Rank %d: ", rank);
   for(i = 0; i < recvCount; i++)
   {
-	  printf("%d ", recvVec[i]);
+	//  printf("%d ", recvVec[i]);
   }
   printf("\n");
-printf("\n%d***\n",rank);
 
   free(vec);
   free(sampleVec);
@@ -168,6 +154,7 @@ printf("\n%d***\n",rank);
   free(recvVec);
   free(rcounts);
   free(rdispls);
+  if(rank!=0)
   MPI_Finalize();
   return 0;
 }
