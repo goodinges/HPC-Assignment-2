@@ -77,13 +77,13 @@ int main( int argc, char *argv[])
 
   /* root processor does a sort, determinates splitters that
    * split the data into P buckets of approximately the same size */
+  splitters = calloc(mpisize - 1, sizeof(int));
   if(rank==0)
   {
 	  qsort(allSamplesVec, sampleSize*mpisize, sizeof(int), compare);
 	for(i=0;i<sampleSize*mpisize;i++)
 	{
 	}
-	  splitters = calloc(mpisize - 1, sizeof(int));
 	  for(i = 0; i < mpisize - 1 ; i++)
 	  {
 		  splitters[i] = allSamplesVec[(i+1)*sampleSize];
@@ -110,7 +110,6 @@ int main( int argc, char *argv[])
   }
   sdispls[j] = i;
   scounts[j] = N - i;
-	for(i=0;i<mpisize;i++)
 
   /* send and receive: either you use MPI_AlltoallV, or
    * (and that might be easier), use an MPI_Alltoall to share
@@ -132,29 +131,39 @@ int main( int argc, char *argv[])
 
   /* do a local sort */
   qsort(recvVec, recvCount, sizeof(int), compare);
-
+  
   /* every processor writes its result to a file */
-  printf("Rank %d: ", rank);
-  for(i = 0; i < recvCount; i++)
-  {
-	//  printf("%d ", recvVec[i]);
-  }
-  printf("\n");
+    FILE* fd = NULL;
+    char filename[256];
+    snprintf(filename, 256, "output%02d.txt", rank);
+    fd = fopen(filename,"w+");
 
-  free(vec);
-  free(sampleVec);
+    if(NULL == fd)
+    {
+      printf("Error opening file \n");
+      return 1;
+    }
+
+    for(i = 0; i < recvCount; i++)
+    {
+	    fprintf(fd, "%d\n", recvVec[i]);
+    }
+    fclose(fd);
+
+  //free(vec);
+  //free(sampleVec);
   if(rank==0)
   {
-	  free(allSamplesVec);
+	  //free(allSamplesVec);
   }
-  free(splitters);
-  free(scounts);
+  //free(splitters);
+  /*free(scounts);
   free(sdispls);
   free(recvCounts);
   free(recvVec);
   free(rcounts);
-  free(rdispls);
-  if(rank!=0)
+  free(rdispls);*/
+  //if(rank!=0)
   MPI_Finalize();
   return 0;
 }
