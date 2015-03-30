@@ -64,7 +64,7 @@ int main( int argc, char *argv[])
    * i.e., every N/P-th entry of the sorted vector */
   for(i = 0; i < sampleSize; i++)
   {
-	  sampleVec[i] = vec[rand()%N];
+	  sampleVec[i] = vec[i*mpisize];
   }
 
   /* every processor communicates the selected entries
