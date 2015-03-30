@@ -64,7 +64,7 @@ int main( int argc, char *argv[])
    * i.e., every N/P-th entry of the sorted vector */
   for(i = 0; i < sampleSize; i++)
   {
-	  sampleVec[i] = vec[i*mpisize];
+	  sampleVec[i] = vec[rand()%N];
   }
 
   /* every processor communicates the selected entries
@@ -81,9 +81,9 @@ int main( int argc, char *argv[])
   if(rank==0)
   {
 	  qsort(allSamplesVec, sampleSize*mpisize, sizeof(int), compare);
-	for(i=0;i<sampleSize*mpisize;i++)
-	{
-	}
+	  for(i=0;i<sampleSize*mpisize;i++)
+	  {
+	  }
 	  for(i = 0; i < mpisize - 1 ; i++)
 	  {
 		  splitters[i] = allSamplesVec[(i+1)*sampleSize];
