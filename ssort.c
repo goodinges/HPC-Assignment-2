@@ -105,9 +105,11 @@ int main( int argc, char *argv[])
 		  i++;
 	  }
   }
-  j++;
+  //j++;
   sdispls[j] = i;
   scounts[j] = N - i;
+  //printf("sdispls=%d\n", sdispls[0]);
+  //printf("scounts=%d\n", scounts[0]);
 
   /* send and receive: either you use MPI_AlltoallV, or
    * (and that might be easier), use an MPI_Alltoall to share
@@ -116,15 +118,22 @@ int main( int argc, char *argv[])
   recvCounts = calloc(mpisize, sizeof(int));
   MPI_Alltoall(scounts, mpisize, MPI_INT, recvCounts, mpisize, MPI_INT, MPI_COMM_WORLD);
   recvCount = 0;
+  rcounts = calloc(mpisize, sizeof(int));
   for(i = 0; i < mpisize ; i++)
   {
 	  recvCount += recvCounts[i];
+	  rcounts[i] = recvCounts[i];
   }
+  printf("recvCount=%d\n", recvCount);
   recvVec = calloc(recvCount, sizeof(int));
-  rcounts = calloc(mpisize, sizeof(int));
   rdispls = calloc(mpisize, sizeof(int));
   MPI_Alltoallv(vec, scounts, sdispls, MPI_INT, recvVec, rcounts, rdispls, MPI_INT, MPI_COMM_WORLD);
-
+  printf("\n---\n");
+	//for(i=0;i<recvCount;i++)
+	//{
+	//	printf("%d\t", recvVec[i]);
+	//}
+	//printf("\n");
   /* do a local sort */
   qsort(recvVec, recvCount, sizeof(int), compare);
 
