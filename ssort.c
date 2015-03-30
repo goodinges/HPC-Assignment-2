@@ -22,13 +22,20 @@ static int compare(const void *a, const void *b)
 int main( int argc, char *argv[])
 {
   int rank;
-  int i, N;
+  int i, j, N;
   int *vec;
   int sampleSize;
   int *sampleVec;
   int *allSamplesVec;
   int mpisize;
   int *splitters;
+  int *scounts;
+  int *sdispls;
+  int *rcounts;
+  int *rdispls;
+  int *recvCounts;
+  int recvCount;
+  int *recvVec;
 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -66,7 +73,7 @@ int main( int argc, char *argv[])
   {
 	  allSamplesVec = calloc(sampleSize*mpisize, sizeof(int));
   }
-  MPI_Gather(sampleVec, samapleSize, MPI_INT, allSamplesVec, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Gather(sampleVec, sampleSize, MPI_INT, allSamplesVec, sampleSize*mpisize, MPI_INT, 0, MPI_COMM_WORLD);
 
   /* root processor does a sort, determinates splitters that
    * split the data into P buckets of approximately the same size */
@@ -76,23 +83,58 @@ int main( int argc, char *argv[])
 	  splitters = calloc(mpisize - 1, sizeof(int));
 	  for(i = 0; i < mpisize - 1 ; i++)
 	  {
-		  splitters[i] = allSampleVec[i*sampleSize];
+		  splitters[i] = allSamplesVec[i*sampleSize];
 	  }
   }
 
   /* root process broadcasts splitters */
+  MPI_Bcast(splitters, mpisize - 1, MPI_INT, 0, MPI_COMM_WORLD);
 
   /* every processor uses the obtained splitters to decide
    * which integers need to be sent to which other processor (local bins) */
+  scounts = calloc(mpisize, sizeof(int));
+  sdispls = calloc(mpisize, sizeof(int));
+  i = 0;
+  for(j = 0; j < mpisize - 1 ; j++)
+  {
+	  sdispls[j] = i;
+	  scounts[j] = 0;
+	  while(vec[i] < splitters[j])
+	  {
+		  scounts[j]++;
+		  i++;
+	  }
+  }
+  j++;
+  sdispls[j] = i;
+  scounts[j] = N - i;
 
   /* send and receive: either you use MPI_AlltoallV, or
    * (and that might be easier), use an MPI_Alltoall to share
    * with every processor how many integers it should expect,
    * and then use MPI_Send and MPI_Recv to exchange the data */
+  recvCounts = calloc(mpisize, sizeof(int));
+  MPI_Alltoall(scounts, mpisize, MPI_INT, recvCounts, mpisize, MPI_INT, MPI_COMM_WORLD);
+  recvCount = 0;
+  for(i = 0; i < mpisize ; i++)
+  {
+	  recvCount += recvCounts[i];
+  }
+  recvVec = calloc(recvCount, sizeof(int));
+  rcounts = calloc(mpisize, sizeof(int));
+  rdispls = calloc(mpisize, sizeof(int));
+  MPI_Alltoallv(vec, scounts, sdispls, MPI_INT, recvVec, rcounts, rdispls, MPI_INT, MPI_COMM_WORLD);
 
   /* do a local sort */
+  qsort(recvVec, recvCount, sizeof(int), compare);
 
   /* every processor writes its result to a file */
+  printf("Rank %d: ", rank);
+  for(i = 0; i < recvCount; i++)
+  {
+	  printf("%d ", recvVec[i]);
+  }
+  printf("\n");
 
   free(vec);
   free(sampleVec);
@@ -100,6 +142,13 @@ int main( int argc, char *argv[])
   {
 	  free(allSamplesVec);
   }
+  free(splitters);
+  free(scounts);
+  free(sdispls);
+  free(recvCounts);
+  free(recvVec);
+  free(rcounts);
+  free(rdispls);
   MPI_Finalize();
   return 0;
 }
