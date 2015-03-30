@@ -74,18 +74,17 @@ int main( int argc, char *argv[])
 	  allSamplesVec = calloc(sampleSize*mpisize, sizeof(int));
   }
   MPI_Gather(sampleVec, sampleSize, MPI_INT, allSamplesVec, sampleSize, MPI_INT, 0, MPI_COMM_WORLD);
-if(rank==0)
-	for(i=0;i<sampleSize*mpisize;i++)
-	{
-		printf("%d->allSamplesVec[%d]:%d\n", rank, i, allSamplesVec[i]);
-	}
   /* root processor does a sort, determinates splitters that
    * split the data into P buckets of approximately the same size */
   if(rank==0)
   {
 	  qsort(allSamplesVec, sampleSize*mpisize, sizeof(int), compare);
+	for(i=0;i<sampleSize*mpisize;i++)
+	{
+		printf("%d->allSamplesVec[%d]:%d\n", rank, i, allSamplesVec[i]);
+	}
 	  splitters = calloc(mpisize - 1, sizeof(int));
-	  for(i = 0; i < mpisize - 1 ; i++)
+	  for(i = 1; i < mpisize ; i++)
 	  {
 		  splitters[i] = allSamplesVec[i*sampleSize];
 		printf("%d->splitters[%d]:%d\n", rank, i, splitters[i]);
