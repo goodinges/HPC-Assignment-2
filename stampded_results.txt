@@ -1,3 +1,17 @@
-Run on 64 nodes:
-SLURM Job_id=5048042 Name=kamran Ended, Run time 00:00:22
-
+N=100:
+	64 nodes:
+		SLURM Job_id=5048042 Name=kamran Ended, Run time 00:00:22
+N=10000:
+	64 nodes:
+		SLURM Job_id=5049160 Name=kamran Ended, Run time 00:00:21
+	500 nodes:
+		LURM Job_id=5049173 Name=kamran Ended, Run time 00:00:21
+	4000 nodes:
+		SLURM Job_id=5049184 Name=kamran Ended, Run time 00:01:27
+N=100000:
+	64 nodes:
+		SLURM Job_id=5049263 Name=kamran Ended, Run time 00:00:22
+	500 nodes:
+		SLURM Job_id=5049214 Name=kamran Ended, Run time 00:00:24
+	4000 nodes:
+		SLURM Job_id=5049198 Name=kamran Ended, Run time 00:01:23
