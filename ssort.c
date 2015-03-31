@@ -43,7 +43,7 @@ int main( int argc, char *argv[])
 
   /* Number of random numbers per processor (this should be increased
    * for actual tests or could be passed in through the command line */
-  N = 100;
+  N = 10000;
 
   vec = calloc(N, sizeof(int));
   sampleSize = N/mpisize;
@@ -64,7 +64,7 @@ int main( int argc, char *argv[])
    * i.e., every N/P-th entry of the sorted vector */
   for(i = 0; i < sampleSize; i++)
   {
-	  sampleVec[i] = vec[i*mpisize];
+	  sampleVec[i] = vec[rand()%N];
   }
 
   /* every processor communicates the selected entries
@@ -102,7 +102,7 @@ int main( int argc, char *argv[])
   {
 	  sdispls[j] = i;
 	  scounts[j] = 0;
-	  while(vec[i] < splitters[j])
+	  while(vec[i] < splitters[j] && i < N)
 	  {
 		  scounts[j]++;
 		  i++;
